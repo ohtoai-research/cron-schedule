@@ -8,6 +8,7 @@
 
 #include <functional>
 #include <memory>
+#include <list>
 #include <map>
 #include "croncpp/croncpp.h"
 
@@ -16,9 +17,10 @@ namespace ohtoai{
 
         class cron_task;
         class cron_schedule;
-        class time_wheel;
-
-
+        template <size_t WheelSize> class timing_wheel;
+        class timer_task;
+        class timer_task_entry;
+        class timer_task_list;
         
         class cron_schedule {
         public: // interface
@@ -62,6 +64,51 @@ namespace ohtoai{
             std::string task_name_;
             cron::cronexpr cron_;
             std::function<void(cron_task& )> callback_;
+        };
+    
+        template <size_t WheelSize>
+        class timing_wheel {
+        public:
+            void tick();
+        private:
+            std::array<timer_task_list, WheelSize> task_lists_;
+        };
+
+        using hour_timing_wheel = timing_wheel<24>;
+        using minute_timing_wheel = timing_wheel<60>;
+        using second_timing_wheel = timing_wheel<60>;
+
+        class timer_task {
+        public:
+            timer_task(const std::string& task_name, const std::time_t& time, std::function<void(timer_task& )> callback);
+            const std::string& task_name() const;
+            const std::time_t& time() const;
+            void invoke();
+        private:
+            std::string task_name_;
+            std::time_t time_;
+            std::function<void(timer_task& )> callback_;
+        };
+
+        class timer_task_entry {
+        public:
+            timer_task_entry(const std::string& task_name, const std::time_t& time, std::function<void(timer_task& )> callback);
+            const std::string& task_name() const;
+            const std::time_t& time() const;
+            void invoke();
+        private:
+            std::string task_name_;
+            std::time_t time_;
+            std::function<void(timer_task& )> callback_;
+        };
+
+        class timer_task_list {
+        public:
+            void add(const timer_task_entry& entry);
+            void remove(const std::string& task_name);
+            void invoke();
+        private:
+            std::list<timer_task_entry> entries_;
         };
     }
 }
